@@ -223,7 +223,7 @@ module cpu (
             choice_pred_dir = ExMa_Taken[1];
             final_pred_correct = (ExMa_br_tkn == Ma_br_tkn);
 
-            if(! (outcome != choice_pred_dir) && final_pred_correct) begin
+            if(!((outcome != choice_pred_dir) && final_pred_correct)) begin
                 ChoicePred[ExMa_ChoicePredIdx] <= (Ma_br_tkn) ? ExMa_Taken + (ExMa_Taken < 3) 
                                                             : ExMa_Taken - (ExMa_Taken > 0);       
             
