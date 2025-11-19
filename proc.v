@@ -141,6 +141,7 @@ module cpu (
     reg [`ChoiceNum -1 : 0]    IfId_ChoicePredIdx;
     reg [`ChoiceNum -1 : 0]    IdEx_ChoicePredIdx;
     reg [`ChoiceNum -1 : 0]    ExMa_ChoicePredIdx;
+    reg [`ChoiceNum -1 : 0]    ChoicePredIdx;
 
     always @(posedge clk_i) if (!w_stall) begin
         if (!rst && !ExMa_stall) begin
@@ -169,9 +170,8 @@ module cpu (
 
     always @(posedge clk_i) begin
         r_bhr <= w_bhr;
-        ChoicePredIdx <= r_pc[`ChoiceNum - 1 : 0];
     end
-    
+    assign ChoicePredIdx = r_pc[`ChoiceNum + 1 : 2];
     assign If_br_pred_tkn = (btb_hit) ? If_pat_hist[1] : 0;
     assign If_br_pred_pc  = r_btb_entry[31:0];
     integer i;
@@ -186,7 +186,6 @@ module cpu (
 
     wire [1:0] w_cnt = (Ma_br_tkn) ? ExMa_pat_hist + (ExMa_pat_hist<3) :
                ExMa_pat_hist - (ExMa_pat_hist>0);
-    reg [`ChoiceNum -1 : 0]    ChoicePredIdx;
     wire [PHT_IDXW-1:0] pht_ridx = (r_pc >> 2) ^ r_bhr; // Note
     wire [PHT_IDXW-1:0] pht_widx = ExMa_br_idx;         // Note
     wire [1:0] whichTaken = ChoicePred[ChoicePredIdx];
@@ -195,6 +194,12 @@ module cpu (
     reg [1:0] r_pht_entry;
     reg        taken_pht_pred_old;
     reg        nottaken_pht_pred_old;
+
+
+
+    integer outcome;
+    integer choice_pred_dir;
+    integer final_pred_correct;
 
     always @(posedge clk_i) if (!w_stall) begin
         if(whichTaken[1] == 1) begin
@@ -211,11 +216,23 @@ module cpu (
             else begin
                 Nottakenpht[pht_widx] <= w_cnt;
             end
+
+            outcome = Ma_br_tkn ? 1 : 0;
+            choice_pred_dir = ExMa_Taken[1];
+            final_pred_correct = (ExMa_br_tkn == Ma_br_tkn);
+
+            if(! (outcome != choice_pred_dir) && final_pred_correct) begin
+                ChoicePred[ExMa_ChoicePredIdx] <= (Ma_br_tkn) ? ExMa_Taken + (ExMa_Taken < 3) 
+                                                            : ExMa_Taken - (ExMa_Taken > 0);       
+            
+            end
         end
-        if(ExMa_v && ExMa_j_b_insn) begin
-        ChoicePred[ExMa_ChoicePredIdx] <= (Ma_br_tkn) ? ExMa_Taken + (ExMa_Taken < 3) 
-                                                      : ExMa_Taken - (ExMa_Taken > 0);
-        end
+
+
+        // if(ExMa_v && ExMa_j_b_insn) begin
+        // ChoicePred[ExMa_ChoicePredIdx] <= (Ma_br_tkn) ? ExMa_Taken + (ExMa_Taken < 3) 
+        //                                               : ExMa_Taken - (ExMa_Taken > 0);
+        // end
         // if(!(/*Ma_br_tkn != ExMa_Taken[1] &&*/ ExMa_pat_hist[1] == Ma_br_tkn) && ExMa_j_b_insn) begin
         //     ChoicePred[ExMa_ChoicePredIdx] <= (Ma_br_tkn) ? ExMa_Taken + (ExMa_Taken < 3) 
         //                                                  : ExMa_Taken - (ExMa_Taken > 0);
