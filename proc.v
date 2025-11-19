@@ -118,7 +118,6 @@ module cpu (
 //------------------------------------------------------------------------------
 // IF: Instruction Fetch
 //------------------------------------------------------------------------------
-    `define ChoiceNum 12
     wire [`PC_W-1:0] If_pc;  // the program counter of the next clock cycle
     wire [`PC_W-1:0] If_pc_inc;  //
     wire If_pc_stall;
@@ -160,7 +159,7 @@ module cpu (
     /********************************************************************/
     
     localparam PHT_ENTRY = (16*1024);
-    localparam CPre_ENTRY = (1024);
+    localparam CPre_ENTRY = (4 * 1024);
     localparam CPre_IDXW  = ($clog2(CPre_ENTRY));
     localparam PHT_IDXW  = ($clog2(PHT_ENTRY));
     localparam BTB_IDXW  = ($clog2(`BTB_ENTRY));
