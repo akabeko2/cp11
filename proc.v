@@ -118,7 +118,7 @@ module cpu (
 //------------------------------------------------------------------------------
 // IF: Instruction Fetch
 //------------------------------------------------------------------------------
-    `define ChoiceNum 7
+    `define ChoiceNum 12
     wire [`PC_W-1:0] If_pc;  // the program counter of the next clock cycle
     wire [`PC_W-1:0] If_pc_inc;  //
     wire If_pc_stall;
@@ -138,10 +138,10 @@ module cpu (
     reg               [1:0]    IfId_Taken;
     reg               [1:0]    IdEx_Taken; 
     reg               [1:0]    ExMa_Taken; 
-    reg [`ChoiceNum -1 : 0]    IfId_ChoicePredIdx;
-    reg [`ChoiceNum -1 : 0]    IdEx_ChoicePredIdx;
-    reg [`ChoiceNum -1 : 0]    ExMa_ChoicePredIdx;
-    reg [`ChoiceNum -1 : 0]    ChoicePredIdx;
+    reg [CPre_IDXW  -1 : 0]    IfId_ChoicePredIdx;
+    reg [CPre_IDXW  -1 : 0]    IdEx_ChoicePredIdx;
+    reg [CPre_IDXW  -1 : 0]    ExMa_ChoicePredIdx;
+    reg [CPre_IDXW  -1 : 0]    ChoicePredIdx;
 
     always @(posedge clk_i) if (!w_stall) begin
         if (!rst && !ExMa_stall) begin
@@ -160,6 +160,8 @@ module cpu (
     /********************************************************************/
     
     localparam PHT_ENTRY = (16*1024);
+    localparam CPre_ENTRY = (1024);
+    localparam CPre_IDXW  = ($clog2(CPre_ENTRY));
     localparam PHT_IDXW  = ($clog2(PHT_ENTRY));
     localparam BTB_IDXW  = ($clog2(`BTB_ENTRY));
 
@@ -171,18 +173,18 @@ module cpu (
     always @(posedge clk_i) begin
         r_bhr <= w_bhr;
     end
-    assign ChoicePredIdx = r_pc[`ChoiceNum + 1 : 2];
+    assign ChoicePredIdx = r_pc[CPre_IDXW  + 1 : 2];
     assign If_br_pred_tkn = (btb_hit) ? If_pat_hist[1] : 0;
     assign If_br_pred_pc  = r_btb_entry[31:0];
     integer i;
     //////////////// PHT, pattern history table
     (* ram_style = "block" *) reg [1:0] Takenpht[0:PHT_ENTRY-1];
     (* ram_style = "block" *) reg [1:0] Nottakenpht[0:PHT_ENTRY-1];
-    (* ram_style = "block" *) reg [1:0] ChoicePred[0:2^`ChoiceNum-1];
+    (* ram_style = "block" *) reg [1:0] ChoicePred[0:CPre_ENTRY -1];
     
     initial for (i = 0; i < PHT_ENTRY; i = i + 1) Takenpht[i] = 2;
     initial for (i = 0; i < PHT_ENTRY; i = i + 1) Nottakenpht[i] = 1;
-    initial for (i = 0; i < PHT_ENTRY; i = i + 1) ChoicePred[i] = 1;
+    initial for (i = 0; i < CPre_ENTRY; i = i + 1) ChoicePred[i] = 1;
 
     wire [1:0] w_cnt = (Ma_br_tkn) ? ExMa_pat_hist + (ExMa_pat_hist<3) :
                ExMa_pat_hist - (ExMa_pat_hist>0);
