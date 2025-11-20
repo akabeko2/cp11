@@ -172,7 +172,21 @@ module cpu (
     always @(posedge clk_i) begin
         r_bhr <= w_bhr;
     end
-    assign ChoicePredIdx = r_pc[CPre_IDXW  + 1 : 2];
+
+// [BRAM化対応 3] BRAM出力保持用レジスタ
+    reg [1:0] r_Takenpht_out;
+    reg [1:0] r_Nottakenpht_out;
+    reg [1:0] r_ChoicePred_out;
+
+    // [BRAM化対応 4] 同期読み出し (assignを廃止し、always内で読み出し)
+    always @(posedge clk_i) begin
+        if (!w_stall) begin
+            r_Takenpht_out    <= Takenpht[next_pht_ridx];
+            r_Nottakenpht_out <= Nottakenpht[next_pht_ridx];
+            r_ChoicePred_out  <= ChoicePred[next_ChoicePredIdx];
+        end
+    end
+
     assign If_br_pred_tkn = (btb_hit) ? If_pat_hist[1] : 0;
     assign If_br_pred_pc  = r_btb_entry[31:0];
     integer i;
@@ -187,11 +201,19 @@ module cpu (
 
     wire [1:0] w_cnt = (Ma_br_tkn) ? ExMa_pat_hist + (ExMa_pat_hist<3) :
                ExMa_pat_hist - (ExMa_pat_hist>0);
+// [BRAM化対応 1] 現在のPCに基づくインデックス（パイプライン保存用）
+    assign ChoicePredIdx = r_pc[CPre_IDXW  + 1 : 2];
+// [BRAM化対応 2] 次のPCに基づくインデックス（メモリ先読み用）
+    wire [CPre_IDXW-1:0] next_ChoicePredIdx = If_pc[CPre_IDXW + 1 : 2];
+    // ※本来は次のBHRを使うべきですが、クリティカルパス回避のためr_bhrを使用
+    wire [PHT_IDXW-1:0]  next_pht_ridx      = (If_pc >> 2) ^ r_bhr;
+
     wire [PHT_IDXW-1:0] pht_ridx = (r_pc >> 2) ^ r_bhr; // Note
     wire [PHT_IDXW-1:0] pht_widx = ExMa_br_idx;         // Note
-    wire [1:0] whichTaken = ChoicePred[ChoicePredIdx];
+    wire [1:0] whichTaken = r_ChoicePred_out;
 
-    assign If_pat_hist =  (whichTaken[1]) ? Takenpht[pht_ridx] : Nottakenpht[pht_ridx];                 // Note !!!
+    assign If_pat_hist =  (whichTaken[1]) ? r_Takenpht_out : r_Nottakenpht_out;
+                   // Note !!!
     reg [1:0] r_pht_entry;
     reg        taken_pht_pred_old;
     reg        nottaken_pht_pred_old;
@@ -224,8 +246,8 @@ module cpu (
 
             if(!((outcome != choice_pred_dir) && final_pred_correct)) begin
                 ChoicePred[ExMa_ChoicePredIdx] <= (Ma_br_tkn) ? ExMa_Taken + (ExMa_Taken < 3) 
-                                                            : ExMa_Taken - (ExMa_Taken > 0);       
-            
+                                                            : ExMa_Taken - (ExMa_Taken > 0);    
+
             end
         end
 
