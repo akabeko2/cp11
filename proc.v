@@ -140,7 +140,7 @@ module cpu (
     reg [CPre_IDXW  -1 : 0]    IfId_ChoicePredIdx;
     reg [CPre_IDXW  -1 : 0]    IdEx_ChoicePredIdx;
     reg [CPre_IDXW  -1 : 0]    ExMa_ChoicePredIdx;
-    reg [CPre_IDXW  -1 : 0]    ChoicePredIdx;
+    wire [CPre_IDXW  -1 : 0]    ChoicePredIdx;
 
     always @(posedge clk_i) if (!w_stall) begin
         if (!rst && !ExMa_stall) begin
